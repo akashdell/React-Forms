@@ -1,54 +1,101 @@
 import React, { Component } from 'react';
+import Joi from 'joi-browser'
+import Input from './common/input';
+
 class LoginForm extends Component {
   state = {
     account: {
       username: '',
       password: ''
-    }
+    },
+    errors: {}
   }
-  handleChange = (name) => (event) => {
-    const account = { ...this.state.account };
+
+  schema = {
+    username: Joi.string().required().label('Username'),
+    password: Joi.string().required().label('Password')
+  }
+
+  validate = () => {
+    const options = { abortEarly: false };
+    const { error } = Joi.validate(this.state.account, this.schema, options)
+    if (!error) return null;
+
+    const errors = {}
+    for (let item of error.details)
+      errors[item.path[0]] = item.message;
+
+    return errors;
+    // const { account } = this.state;
+    // if (account.username.trim() === '')
+    //   errors.username = "Username is required";
+    // if (account.password.trim() === '')
+    //   errors.password = "Password is required"
+    // return Object.keys(errors).length === 0 ? null : errors;
+  }
+
+  validateProperty = ({ name, value }) => {
+    const obj = { [name]: value };
+    const schema = { [name]: this.schema[name] }
+    const { error } = Joi.validate(obj, schema)
+    if (!error) return null
+    return error.details[0].message;
+
+    // if (name === 'username') {
+    //   if (value === '')
+    //     return 'username is required'
+    // }
+    // if (name === 'password') {
+    //   if (value === '')
+    //     return 'password is required'
+    // }
+  }
+
+  handleChange = (event) => {
     const { currentTarget: input } = event
-    account[name] = input.value;
-    this.setState({ account })
+    const errors = { ...this.state.errors }
+    console.log("input>>>>", input)
+    const errorMessage = this.validateProperty(input);
+    console.log(">>>>>>>>>>>>>>", errorMessage)
+    if (errorMessage) errors[input.name] = errorMessage;
+    else delete errors[input.name]
+
+    const account = { ...this.state.account };
+    account[input.name] = input.value;
+    this.setState({ account, errors })
   }
 
   handleSubmit = (e) => {
     e.preventDefault();
-    const username = this.username.current.value;
-    console.log("submitted", username);
+    const errors = this.validate();
+    console.log(">>>>>>>>", errors);
+    this.setState({ errors: errors || {} })
+    if (errors) return;
   }
 
   render() {
-    const { account } = this.state;
+    const { account, errors } = this.state;
     return (<div>
       <h1> Login</h1>
       <form onSubmit={this.handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="username" >Username</label>
-          <input
-            value={account.username}
-            id="username"
-            type="text"
-            className="form-control"
-            onChange={this.handleChange('username')}
-            name='username'
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="password" >Password</label>
-          <input
-            id="password"
-            type=" text"
-            className="form-control"
-            onChange={this.handleChange('password')}
-            name='password'
-            value={account.password}
-          />
-        </div>
+        <Input
+          name='username'
+          label='Username'
+          value={account.username}
+          onChange={this.handleChange}
+          error={errors.username}
+        />
+        <Input
+          name='password'
+          label='Password'
+          value={account.password}
+          onChange={this.handleChange}
+          error={errors.password}
+        />
+
         <button className="btn btn-primary">Login</button>
       </form>
-    </div>);
+    </div >);
   }
 }
 
